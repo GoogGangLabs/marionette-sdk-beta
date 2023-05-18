@@ -1,0 +1,9 @@
+.github/
+node_modules/
+src/
+test/
+version.sh
+tsconfig.json
+rollup.config.js
+jest.config.js
+yarn.lock
