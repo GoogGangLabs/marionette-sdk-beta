@@ -283,28 +283,31 @@ marionetteClient.on('ERROR', (error: ErrorMessage) => {});
     <title>Marionette SDK</title>
     <script src="https://unpkg.com/marionette-sdk-beta/lib/index.min.js"></script>
     <style>
-      .button {
+      button {
         width: 150px;
         height: 60px;
         margin: 20px 10px;
       }
 
-      .video {
+      video, canvas {
         position: absolute;
       }
     </style>
   </head>
   <body>
-    <button id="btn-start" class="button" onclick="handleStart()">start</button>
-    <button id="btn-stop" class="button" onclick="handleStop()">stop</button>
-    <video id="video" class="video" width="640px" height="480px"></video>
-    <canvas id="guide" class="video"></canvas>
+    <button onclick="handleStart()">start</button>
+    <button onclick="handleStop()">stop</button>
+    <video id="video" width="640px" height="480px"></video>
+    <canvas id="guide"></canvas>
 
     <script>
       const marionetteClient = MarionetteClient.getClient();
 
       const handleStart = async () => {
+        const video = document.getElementById("video");
         const canvas = document.getElementById("guide");
+        canvas.width = video.width;
+        canvas.height = video.height;
 
         marionetteClient.on("LOAD_STREAM", async (stream) => {
           const videoElement = document.getElementById("video");
