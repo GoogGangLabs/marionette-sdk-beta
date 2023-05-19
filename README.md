@@ -281,7 +281,7 @@ marionetteClient.on('ERROR', (error: ErrorMessage) => {});
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Marionette SDK</title>
-    <script src="https://unpkg.com/marionette-sdk-beta@0.1.0/lib/index.min.js"></script>
+    <script src="https://unpkg.com/marionette-sdk-beta/lib/index.min.js"></script>
     <style>
       .button {
         width: 150px;
