@@ -1,3 +1,4 @@
+import { OneEuroFilter } from "./filter";
 import { CandidateType, InferenceType, ProcessorType } from "./enum";
 
 export interface DebugDataDetail {
@@ -46,6 +47,20 @@ export interface InferenceResult {
   right_hand: LandmarkResult[];
   pose: LandmarkResult[];
   pose_world: LandmarkResult[];
+}
+
+export interface EuroFilterLandmark {
+  x: OneEuroFilter;
+  y: OneEuroFilter;
+  z: OneEuroFilter;
+}
+
+export interface EuroFilter {
+  face: EuroFilterLandmark[];
+  left_hand: EuroFilterLandmark[];
+  right_hand: EuroFilterLandmark[];
+  pose: EuroFilterLandmark[];
+  pose_world: EuroFilterLandmark[];
 }
 
 export interface StreamResponse {

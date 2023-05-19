@@ -4,7 +4,7 @@
 
 <br>
 
-The Marionette SDK provides real-time Deep-learning Inference results using WebRTC and WebSocket.<br>
+The Marionette SDK provides real-time Deep-learning Inference results using WebRTC and WebSockets.<br>
 For easy use, users can manage video streams and perform deep learning inference with just an abstracted method call.<br>
 
 <br>
@@ -17,7 +17,7 @@ For easy use, users can manage video streams and perform deep learning inference
 
 <br>
 
-**WebSocket**
+**WebSockets**
 
 - Receives up to 30 deep learning results per second.
 - Sends debugging results to the server to save SDK usage logs.

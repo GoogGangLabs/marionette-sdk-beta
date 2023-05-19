@@ -2,9 +2,18 @@ import { EventEmitter } from "events";
 import { io, Socket } from "socket.io-client";
 import protobuf from "protobufjs";
 
-import { DebugDataSet, StreamConfigurations, InferenceResult, StreamResponse } from "./types";
+import {
+  DebugDataSet,
+  StreamConfigurations,
+  InferenceResult,
+  StreamResponse,
+  EuroFilter,
+  EuroFilterLandmark,
+  LandmarkResultList,
+} from "./types";
 import { ErrorMessage, EventStatus, InferenceType, CandidateType, ProcessorType } from "./enum";
 import { drawConnectors, drawLandmarks, HAND_CONNECTIONS, POSE_CONNECTIONS, FACEMESH_TESSELATION } from "./draw";
+import { OneEuroFilter } from "./filter";
 
 const protoSchema = `
 syntax = "proto3";
@@ -52,6 +61,7 @@ class MarionetteClient {
   private publishFlag = false;
   private stream: MediaStream;
   private debugDataSet: DebugDataSet;
+  private euroFilter: EuroFilter;
 
   constructor() {
     this.signalSocket = io(host, { path: "/stream" });
@@ -155,6 +165,7 @@ class MarionetteClient {
 
     if (this.config.debug) this.initDebugDataSet();
     this.peerConnection.setRemoteDescription(answer);
+    this.euroFilter = this.initFilter();
     this.resultSocket.on("stream_output", this.dataHandler);
   };
 
@@ -293,9 +304,64 @@ class MarionetteClient {
       enums: String,
       bytes: String,
     }) as StreamResponse;
-    const results: InferenceResult = data.result;
+    const results: InferenceResult = this.filterResult(data.result);
     this.event.emit(EventStatus.INFERENCE_RESULT, results);
     if (this.config.debug) this.setDebugData(data);
+  };
+
+  private initFilter = (): EuroFilter => {
+    const initializeTarget = (size: number) =>
+      Array.from({ length: size }, (_, __) => ({
+        x: new OneEuroFilter(),
+        y: new OneEuroFilter(),
+        z: new OneEuroFilter(),
+      }));
+    return {
+      face: initializeTarget(478),
+      left_hand: initializeTarget(21),
+      right_hand: initializeTarget(21),
+      pose: initializeTarget(33),
+      pose_world: initializeTarget(33),
+    };
+  };
+
+  private filterResult = (result: InferenceResult): InferenceResult => {
+    const filteredLandmarks: InferenceResult = {
+      face: undefined,
+      left_hand: undefined,
+      right_hand: undefined,
+      pose: undefined,
+      pose_world: undefined,
+    };
+
+    for (const key in this.euroFilter) {
+      const filteredLandmark: LandmarkResultList = [];
+      const euroFilterLandmark: EuroFilterLandmark[] = this.euroFilter[key];
+
+      euroFilterLandmark.forEach((point: EuroFilterLandmark, idx: number) => {
+        const filteredPoint = {
+          x: undefined,
+          y: undefined,
+          z: undefined,
+          visibility: undefined,
+        };
+        const { x, y, z } = point;
+
+        if (result[key]) {
+          filteredPoint.x = x.filter(result[key][idx].x);
+          filteredPoint.y = y.filter(result[key][idx].y);
+          filteredPoint.z = z.filter(result[key][idx].z);
+          if (result[key][idx].visibility) filteredPoint.visibility = result[key][idx].visibility;
+          filteredLandmark.push(filteredPoint);
+        } else {
+          x.reset();
+          y.reset();
+          z.reset();
+        }
+      });
+      if (filteredLandmark.length > 0) filteredLandmarks[key] = filteredLandmark;
+    }
+    return filteredLandmarks;
   };
 
   private getLineWidth = (width: number, line = true) => {
