@@ -87,7 +87,7 @@ class MarionetteClient {
   };
 
   public loadStream = async (config?: StreamConfigurations) => {
-    this.setStreamConfiguration(config);
+    this.setStreamConfiguration(config || {});
     this.stream = await navigator.mediaDevices.getUserMedia({
       video: {
         deviceId: this.config.deviceId,
@@ -302,7 +302,7 @@ class MarionetteClient {
     return width * Math.pow(this.config.width / 640, line ? 1 : 2);
   };
 
-  private setStreamConfiguration = (config?: StreamConfigurations) => {
+  private setStreamConfiguration = (config: StreamConfigurations) => {
     this.config.deviceId = config.deviceId || this.config.deviceId;
     this.config.width = config.width || this.config.width;
     this.config.height = config.height || this.config.height;
