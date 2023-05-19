@@ -13,8 +13,8 @@
   "private": false,
   "license": "MIT",
   "scripts": {
-    "update": "yarn test && sh script/deploy.sh",
-    "deploy": "yarn test && sh script/publish.sh && sh script/deploy.sh",
+    "update": "yarn test && sh script/push.sh",
+    "deploy": "yarn test && sh script/validation.sh && sh script/push.sh",
     "build": "rollup -c --bundleConfigAsCjs",
     "test": "jest"
   },
