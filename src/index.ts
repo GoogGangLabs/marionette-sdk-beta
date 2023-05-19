@@ -57,6 +57,7 @@ class MarionetteClient {
     this.signalSocket = io(host, { path: "/stream" });
     this.resultSocket = io(host, { path: "/result" });
 
+    this.config.deviceId = "";
     this.config.width = 320;
     this.config.height = 240;
     this.config.frameRate = 30;
