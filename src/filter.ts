@@ -1,84 +1,102 @@
 class LowPassFilter {
-  cutoff: number;
-  value: number;
-  isInitialized: boolean;
+  private a: number;
+  private y: number;
+  private s: number;
+  private initialized: boolean;
 
-  constructor(cutoff: number) {
-    this.cutoff = cutoff;
-    this.value = null;
-    this.isInitialized = false;
+  private setAlpha(alpha: number) {
+    this.a = alpha;
   }
 
-  alpha(cutoff) {
-    const tau = 1.0 / (2 * Math.PI * cutoff);
-    return 1.0 / (1.0 + tau);
+  constructor(alpha: number, initval: number = 0.0) {
+    this.y = this.s = initval;
+    this.setAlpha(alpha);
+    this.initialized = false;
   }
 
-  update(value, alpha = this.alpha(this.cutoff)) {
-    if (this.value === null) {
-      this.value = value;
-      return this.value;
+  private filter(value: number): number {
+    let result: number;
+    if (this.initialized) result = this.a * value + (1.0 - this.a) * this.s;
+    else {
+      result = value;
+      this.initialized = true;
     }
-
-    this.value = alpha * value + (1 - alpha) * this.value;
-    return this.value;
+    this.y = value;
+    this.s = result;
+    return result;
   }
 
-  reset() {
-    this.value = null;
+  public filterWithAlpha(value: number, alpha: number): number {
+    this.setAlpha(alpha);
+    return this.filter(value);
+  }
+
+  public hasLastRawValue(): boolean {
+    return this.initialized;
+  }
+
+  public lastRawValue(): number {
+    return this.y;
+  }
+
+  public reset() {
+    this.initialized = false;
   }
 }
 
 export class OneEuroFilter {
-  minCutoff: number;
-  beta: number;
-  dCutoff: number;
-  freq: number;
+  private freq: number;
+  private mincutoff: number;
+  private beta: number;
+  private dcutoff: number;
+  private x: LowPassFilter;
+  private dx: LowPassFilter;
+  private lasttime: number;
 
-  x: LowPassFilter;
-  dx: LowPassFilter;
-  lastTime: number;
-
-  constructor(minCutoff = 1.0, beta = 0.0, dCutoff = 1.0, freq = 60) {
-    this.minCutoff = minCutoff;
-    this.beta = beta;
-    this.dCutoff = dCutoff;
-    this.freq = freq;
-
-    this.x = new LowPassFilter(minCutoff);
-    this.dx = new LowPassFilter(dCutoff);
-    this.lastTime = null;
-  }
-
-  alpha(cutoff: number) {
-    const te = 1.0 / this.freq;
-    const tau = 1.0 / (2 * Math.PI * cutoff);
+  private alpha(cutoff: number): number {
+    let te = 1.0 / this.freq;
+    let tau = 1.0 / (2 * Math.PI * cutoff);
     return 1.0 / (1.0 + tau / te);
   }
 
-  filter(value: number, timestamp = Date.now()) {
-    if (this.lastTime === null) {
-      this.lastTime = timestamp;
-      this.x.update(value, this.alpha(this.minCutoff));
-      return this.x.value;
-    }
-
-    const duration = (timestamp - this.lastTime) / 1000;
-    this.freq = 1 / duration;
-    this.lastTime = timestamp;
-
-    const prevX = this.x.value;
-    this.x.update(value, this.alpha(this.minCutoff));
-    const dx = (this.x.value - prevX) / duration;
-    const edx = this.dx.update(dx, this.alpha(this.dCutoff));
-    const cutoff = this.minCutoff + this.beta * Math.abs(edx);
-
-    return this.x.update(value, this.alpha(cutoff));
+  private setFrequency(f: number) {
+    this.freq = f;
   }
 
-  reset() {
+  private setMinCutoff(mc: number) {
+    this.mincutoff = mc;
+  }
+
+  private setBeta(b: number) {
+    this.beta = b;
+  }
+
+  private setDerivateCutoff(dc: number) {
+    this.dcutoff = dc;
+  }
+
+  constructor(freq: number = 30, mincutoff: number = 1.0, beta: number = 0.0, dcutoff: number = 1.0) {
+    this.setFrequency(freq);
+    this.setMinCutoff(mincutoff);
+    this.setBeta(beta);
+    this.setDerivateCutoff(dcutoff);
+    this.x = new LowPassFilter(this.alpha(mincutoff));
+    this.dx = new LowPassFilter(this.alpha(dcutoff));
+    this.lasttime = undefined;
+  }
+
+  public reset() {
     this.x.reset();
     this.dx.reset();
-    this.lastTime = null;
+    this.lasttime = undefined;
+  }
+
+  public filter(value: number, timestamp: number = undefined): number {
+    if (this.lasttime != undefined && timestamp != undefined) this.freq = 1.0 / (timestamp - this.lasttime);
+    this.lasttime = timestamp;
+    let dvalue = this.x.hasLastRawValue() ? (value - this.x.lastRawValue()) * this.freq : 0.0;
+    let edvalue = this.dx.filterWithAlpha(dvalue, this.alpha(this.dcutoff));
+    let cutoff = this.mincutoff + this.beta * Math.abs(edvalue);
+    return this.x.filterWithAlpha(value, this.alpha(cutoff));
   }
 }

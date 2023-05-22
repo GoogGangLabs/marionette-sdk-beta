@@ -33,20 +33,18 @@ export interface StreamConfigurations {
 }
 
 export interface LandmarkResult {
-  x: number;
-  y: number;
+  x?: number;
+  y?: number;
   z?: number;
   visibility?: number;
 }
 
-export type LandmarkResultList = LandmarkResult[];
-
 export interface InferenceResult {
-  face: LandmarkResult[];
-  left_hand: LandmarkResult[];
-  right_hand: LandmarkResult[];
-  pose: LandmarkResult[];
-  pose_world: LandmarkResult[];
+  face?: LandmarkResult[];
+  left_hand?: LandmarkResult[];
+  right_hand?: LandmarkResult[];
+  pose?: LandmarkResult[];
+  pose_world?: LandmarkResult[];
 }
 
 export interface EuroFilterLandmark {

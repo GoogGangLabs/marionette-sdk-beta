@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Marionette SDK</title>
+    <script src="./dist/index.min.js"></script>
+    <style>
+      button {
+        width: 150px;
+        height: 60px;
+        margin: 20px 10px;
+      }
+
+      video,
+      canvas {
+        position: absolute;
+      }
+    </style>
+  </head>
+  <body>
+    <button onclick="handleStart()">start</button>
+    <button onclick="handleStop()">stop</button>
+    <video id="video" width="640px" height="480px"></video>
+    <canvas id="guide"></canvas>
+
+    <script>
+      const marionetteClient = MarionetteClient.getClient();
+
+      const handleStart = async () => {
+        const video = document.getElementById("video");
+        const canvas = document.getElementById("guide");
+        canvas.width = video.width;
+        canvas.height = video.height;
+
+        marionetteClient.on("LOAD_STREAM", async (stream) => {
+          const videoElement = document.getElementById("video");
+          videoElement.srcObject = stream;
+          videoElement.play();
+        });
+
+        marionetteClient.on("INFERENCE_RESULT", (result) => {
+          /*
+            When the deep learning results are received,
+            you can visualize the results by passing them to the method below.
+          */
+          marionetteClient.drawUtils(canvas, result);
+        });
+
+        marionetteClient.on("ICE_CANDIDATE", (state) => {
+          console.log(state);
+        });
+
+        marionetteClient.on("ERROR", (error) => {
+          console.log(error);
+        });
+
+        /* Input your access code */
+        await marionetteClient.createClient("ggl123@");
+        await marionetteClient.loadStream({
+          width: 160,
+          height: 120,
+          model: ["Pose"],
+        });
+        await marionetteClient.publish();
+      };
+
+      const handleStop = () => {
+        marionetteClient.stop();
+      };
+    </script>
+  </body>
+</html>
