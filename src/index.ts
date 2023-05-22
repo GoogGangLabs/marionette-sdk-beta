@@ -103,7 +103,7 @@ class MarionetteClient {
         deviceId: this.config.deviceId,
         width: this.config.width,
         height: this.config.height,
-        frameRate: this.config.height,
+        frameRate: { ideal: this.config.frameRate, min: 5 },
       },
     });
     this.stream.getTracks().forEach((track) => this.peerConnection.addTrack(track, this.stream));
@@ -339,15 +339,15 @@ class MarionetteClient {
       const euroFilterLandmark: EuroFilterLandmark[] = this.euroFilter[key];
 
       euroFilterLandmark.forEach((point: EuroFilterLandmark, idx: number) => {
+        const { x, y, z } = point;
         const filteredPoint = {
           x: undefined,
           y: undefined,
           z: undefined,
           visibility: undefined,
         };
-        const { x, y, z } = point;
 
-        if (result[key]) {
+        if (result[key] && result[key].length > 0) {
           filteredPoint.x = x.filter(result[key][idx].x);
           filteredPoint.y = y.filter(result[key][idx].y);
           filteredPoint.z = z.filter(result[key][idx].z);
