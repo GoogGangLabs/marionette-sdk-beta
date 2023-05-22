@@ -3,6 +3,7 @@ script/
 node_modules/
 src/
 test/
+example/
 version.sh
 tsconfig.json
 rollup.config.js
