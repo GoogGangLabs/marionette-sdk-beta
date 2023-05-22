@@ -9,7 +9,7 @@ import {
   StreamResponse,
   EuroFilter,
   EuroFilterLandmark,
-  LandmarkResultList,
+  LandmarkResult,
 } from "./types";
 import { ErrorMessage, EventStatus, InferenceType, CandidateType, ProcessorType } from "./enum";
 import { drawConnectors, drawLandmarks, HAND_CONNECTIONS, POSE_CONNECTIONS, FACEMESH_TESSELATION } from "./draw";
@@ -175,12 +175,12 @@ class MarionetteClient {
     context.save();
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (result.pose && result.pose.length > 0) {
-      for (let i = 0; i < 23; i++) {
-        if (i > 10 && i < 17) continue;
-        result.pose[i] = { x: 0, y: 0, z: 0, visibility: 0 };
-      }
-    }
+    // if (result.pose && result.pose.length > 0) {
+    //   for (let i = 0; i < 23; i++) {
+    //     if (i > 10 && i < 17) continue;
+    //     result.pose[i] = { x: 0, y: 0, z: 0, visibility: 0 };
+    //   }
+    // }
 
     drawConnectors(context, result.pose, POSE_CONNECTIONS, { color: "#00cff7", lineWidth: this.getLineWidth(4) });
     drawLandmarks(context, result.pose, { color: "#ff0364", lineWidth: this.getLineWidth(2, false) });
@@ -326,28 +326,17 @@ class MarionetteClient {
   };
 
   private filterResult = (result: InferenceResult): InferenceResult => {
-    const filteredLandmarks: InferenceResult = {
-      face: undefined,
-      left_hand: undefined,
-      right_hand: undefined,
-      pose: undefined,
-      pose_world: undefined,
-    };
+    const filteredLandmarks: InferenceResult = {};
 
     for (const key in this.euroFilter) {
-      const filteredLandmark: LandmarkResultList = [];
+      const filteredLandmark: LandmarkResult[] = [];
       const euroFilterLandmark: EuroFilterLandmark[] = this.euroFilter[key];
 
       euroFilterLandmark.forEach((point: EuroFilterLandmark, idx: number) => {
         const { x, y, z } = point;
-        const filteredPoint = {
-          x: undefined,
-          y: undefined,
-          z: undefined,
-          visibility: undefined,
-        };
+        const filteredPoint: LandmarkResult = {};
 
-        if (result[key] && result[key].length > 0) {
+        if (result[key]) {
           filteredPoint.x = x.filter(result[key][idx].x);
           filteredPoint.y = y.filter(result[key][idx].y);
           filteredPoint.z = z.filter(result[key][idx].z);

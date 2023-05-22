@@ -1,4 +1,4 @@
-import { LandmarkConnectionArray, DrawingOptions, LandmarkResult, LandmarkResultList } from "./types";
+import { LandmarkConnectionArray, DrawingOptions, LandmarkResult } from "./types";
 
 const w = { color: "white", lineWidth: 4, radius: 6, visibilityMin: 0.5 };
 
@@ -13,7 +13,7 @@ const proceed = (value: Function | any, params?: any) => {
 
 export const drawConnectors = (
   context: CanvasRenderingContext2D,
-  landmarks: LandmarkResultList,
+  landmarks: LandmarkResult[],
   connections?: LandmarkConnectionArray,
   style?: DrawingOptions
 ) => {
@@ -45,7 +45,7 @@ export const drawConnectors = (
 
 export const drawLandmarks = (
   context: CanvasRenderingContext2D,
-  landmarks?: LandmarkResultList,
+  landmarks?: LandmarkResult[],
   style?: DrawingOptions
 ) => {
   if (landmarks) {
