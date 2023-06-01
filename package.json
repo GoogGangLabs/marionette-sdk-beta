@@ -1,6 +1,6 @@
 {
   "name": "marionette-sdk-beta",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Marionette API to SDK",
   "main": "./lib/index.cjs",
   "module": "./lib/index.mjs",
@@ -19,6 +19,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "pako": "^2.1.0",
     "protobufjs": "^7.2.3",
     "socket.io-client": "^4.6.1"
   },
@@ -28,6 +29,7 @@
     "@rollup/plugin-terser": "^0.4.1",
     "@types/jest": "^29.5.1",
     "@types/node": "^18.16.3",
+    "@types/pako": "^2.0.0",
     "jest": "^29.5.0",
     "rollup": "^3.21.6",
     "rollup-plugin-polyfill-node": "^0.12.0",
