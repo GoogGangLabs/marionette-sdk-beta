@@ -1,3 +1,5 @@
+/* Legacy */
+
 class LowPassFilter {
   private a: number;
   private y: number;

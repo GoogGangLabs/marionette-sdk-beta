@@ -1,4 +1,3 @@
-import { OneEuroFilter } from "./filter";
 import { CandidateType, InferenceType, ProcessorType } from "./enum";
 
 export interface DebugDataDetail {
@@ -32,33 +31,31 @@ export interface StreamConfigurations {
   debug?: boolean;
 }
 
-export interface LandmarkResult {
+export interface LandmarkPoint {
   x?: number;
   y?: number;
   z?: number;
   visibility?: number;
 }
 
-export interface InferenceResult {
-  face?: LandmarkResult[];
-  left_hand?: LandmarkResult[];
-  right_hand?: LandmarkResult[];
-  pose?: LandmarkResult[];
-  pose_world?: LandmarkResult[];
+export type DeserializeLandmark = LandmarkPoint[];
+
+export interface DeserializeLandmarks {
+  face?: DeserializeLandmark;
+  left_hand?: DeserializeLandmark;
+  right_hand?: DeserializeLandmark;
+  pose?: DeserializeLandmark;
+  pose_world?: DeserializeLandmark;
 }
 
-export interface EuroFilterLandmark {
-  x: OneEuroFilter;
-  y: OneEuroFilter;
-  z: OneEuroFilter;
-}
+export type SerializeLandmark = number[];
 
-export interface EuroFilter {
-  face: EuroFilterLandmark[];
-  left_hand: EuroFilterLandmark[];
-  right_hand: EuroFilterLandmark[];
-  pose: EuroFilterLandmark[];
-  pose_world: EuroFilterLandmark[];
+export interface SerializeLandmarks {
+  face?: SerializeLandmark;
+  left_hand?: SerializeLandmark;
+  right_hand?: SerializeLandmark;
+  pose?: SerializeLandmark;
+  pose_world?: SerializeLandmark;
 }
 
 export interface StreamResponse {
@@ -69,7 +66,7 @@ export interface StreamResponse {
   timestamp: number[];
   step: number[];
   dataSize: number[];
-  result: InferenceResult;
+  result: SerializeLandmarks;
 }
 
 export type LandmarkConnectionArray = Array<[number, number]>;
@@ -78,8 +75,8 @@ export type Fn<I, O> = (input: I) => O;
 
 export interface Data {
   index?: number;
-  from?: LandmarkResult;
-  to?: LandmarkResult;
+  from?: DeserializeLandmarks;
+  to?: DeserializeLandmarks;
 }
 
 export interface DrawingOptions {

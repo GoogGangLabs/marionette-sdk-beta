@@ -1,38 +1,31 @@
 import { EventEmitter } from "events";
 import { io, Socket } from "socket.io-client";
 import protobuf from "protobufjs";
+import pako from "pako";
 
 import {
   DebugDataSet,
   StreamConfigurations,
-  InferenceResult,
+  SerializeLandmarks,
   StreamResponse,
-  EuroFilter,
-  EuroFilterLandmark,
-  LandmarkResult,
+  DeserializeLandmarks,
+  SerializeLandmark,
+  LandmarkPoint,
 } from "./types";
 import { ErrorMessage, EventStatus, InferenceType, CandidateType, ProcessorType } from "./enum";
 import { drawConnectors, drawLandmarks, HAND_CONNECTIONS, POSE_CONNECTIONS, FACEMESH_TESSELATION } from "./draw";
-import { OneEuroFilter } from "./filter";
 
 const protoSchema = `
 syntax = "proto3";
 
 package streampackage;
 
-message LandmarkResult {
-  float x = 1;
-  float y = 2;
-  float z = 3;
-  float visibility = 4;
-}
-
 message InferenceResult {
-  repeated LandmarkResult face = 1;
-  repeated LandmarkResult left_hand = 2;
-  repeated LandmarkResult right_hand = 3;
-  repeated LandmarkResult pose = 4;
-  repeated LandmarkResult pose_world = 5;
+  repeated int32 face = 1;
+  repeated int32 left_hand = 2;
+  repeated int32 right_hand = 3;
+  repeated int32 pose = 4;
+  repeated int32 pose_world = 5;
 }
 
 message StreamResponse {
@@ -61,7 +54,6 @@ class MarionetteClient {
   private publishFlag = false;
   private stream: MediaStream;
   private debugDataSet: DebugDataSet;
-  private euroFilter: EuroFilter;
 
   constructor() {
     this.signalSocket = io(host, { path: "/stream" });
@@ -165,39 +157,39 @@ class MarionetteClient {
 
     if (this.config.debug) this.initDebugDataSet();
     this.peerConnection.setRemoteDescription(answer);
-    this.euroFilter = this.initFilter();
     this.resultSocket.on("stream_output", this.dataHandler);
   };
 
-  public drawUtils = (canvas: HTMLCanvasElement, result: InferenceResult) => {
+  public drawUtils = (canvas: HTMLCanvasElement, result: DeserializeLandmarks) => {
     const context = canvas.getContext("2d");
 
     context.save();
     context.clearRect(0, 0, canvas.width, canvas.height);
 
-    // if (result.pose && result.pose.length > 0) {
-    //   for (let i = 0; i < 23; i++) {
-    //     if (i > 10 && i < 17) continue;
-    //     result.pose[i] = { x: 0, y: 0, z: 0, visibility: 0 };
-    //   }
-    // }
+    // todo: pose만 선택했을 때, 얼굴과 손 위치 좌표를 넣어야 할 듯
+    if (result.pose && result.pose.length > 0) {
+      for (let i = 0; i < 23; i++) {
+        if (i > 10 && i < 17) continue;
+        result.pose[i] = { x: 0, y: 0, z: 0, visibility: 0 };
+      }
+    }
 
-    drawConnectors(context, result.pose, POSE_CONNECTIONS, { color: "#00cff7", lineWidth: this.getLineWidth(4) });
-    drawLandmarks(context, result.pose, { color: "#ff0364", lineWidth: this.getLineWidth(2, false) });
+    drawConnectors(context, result.pose, POSE_CONNECTIONS, { color: "#00cff7", lineWidth: 4 });
+    drawLandmarks(context, result.pose, { color: "#ff0364", lineWidth: 2 });
     drawConnectors(context, result.face, FACEMESH_TESSELATION, {
       color: "#C0C0C070",
-      lineWidth: this.getLineWidth(1),
+      lineWidth: 1,
     });
     drawConnectors(context, result.left_hand, HAND_CONNECTIONS, {
       color: "#eb1064",
-      lineWidth: this.getLineWidth(5),
+      lineWidth: 5,
     });
-    drawLandmarks(context, result.left_hand, { color: "#00cff7", lineWidth: this.getLineWidth(2, false) });
+    drawLandmarks(context, result.left_hand, { color: "#00cff7", lineWidth: 2 });
     drawConnectors(context, result.right_hand, HAND_CONNECTIONS, {
       color: "#22c3e3",
-      lineWidth: this.getLineWidth(5),
+      lineWidth: 5,
     });
-    drawLandmarks(context, result.right_hand, { color: "#ff0364", lineWidth: this.getLineWidth(2, false) });
+    drawLandmarks(context, result.right_hand, { color: "#ff0364", lineWidth: 2 });
   };
 
   public stop = () => {
@@ -297,64 +289,44 @@ class MarionetteClient {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
 
-  private dataHandler = (buffer: Uint16Array) => {
-    const decoded = streamMessage.decode(new Uint8Array(buffer));
+  private dataHandler = (buffer: Buffer) => {
+    const decompressedBuffer = pako.ungzip(buffer);
+    const decoded = streamMessage.decode(decompressedBuffer);
     const data = streamMessage.toObject(decoded, {
       longs: String,
       enums: String,
       bytes: String,
     }) as StreamResponse;
-    const results: InferenceResult = this.filterResult(data.result);
+    const results: DeserializeLandmarks = this.deserializeResult(data.result);
     this.event.emit(EventStatus.INFERENCE_RESULT, results);
     if (this.config.debug) this.setDebugData(data);
   };
 
-  private initFilter = (): EuroFilter => {
-    const initializeTarget = (size: number) =>
-      Array.from({ length: size }, (_, __) => ({
-        x: new OneEuroFilter(),
-        y: new OneEuroFilter(),
-        z: new OneEuroFilter(),
-      }));
-    return {
-      face: initializeTarget(478),
-      left_hand: initializeTarget(21),
-      right_hand: initializeTarget(21),
-      pose: initializeTarget(33),
-      pose_world: initializeTarget(33),
-    };
-  };
-
-  private filterResult = (result: InferenceResult): InferenceResult => {
-    const filteredLandmarks: InferenceResult = {};
-
-    for (const key in this.euroFilter) {
-      const filteredLandmark: LandmarkResult[] = [];
-      const euroFilterLandmark: EuroFilterLandmark[] = this.euroFilter[key];
-
-      euroFilterLandmark.forEach((point: EuroFilterLandmark, idx: number) => {
-        const { x, y, z } = point;
-        const filteredPoint: LandmarkResult = {};
-
-        if (result[key]) {
-          filteredPoint.x = x.filter(result[key][idx].x);
-          filteredPoint.y = y.filter(result[key][idx].y);
-          filteredPoint.z = z.filter(result[key][idx].z);
-          if (result[key][idx].visibility) filteredPoint.visibility = result[key][idx].visibility;
-          filteredLandmark.push(filteredPoint);
-        } else {
-          x.reset();
-          y.reset();
-          z.reset();
-        }
-      });
-      if (filteredLandmark.length > 0) filteredLandmarks[key] = filteredLandmark;
+  private deserializeLandmark = (landmark: SerializeLandmark, length: number) => {
+    if (!landmark || !landmark.length) return undefined;
+    const limitFlag = length !== 33 ? 3 : 4;
+    const deserialLandmarks = [];
+    for (let idx = 0; idx < length; idx++) {
+      const correctIndex = idx * limitFlag;
+      const desirialLandmark: LandmarkPoint = {
+        x: (landmark[correctIndex] - 1) / 10000,
+        y: (landmark[correctIndex + 1] - 1) / 10000,
+        z: (landmark[correctIndex + 2] - 1) / 10000,
+      };
+      if (limitFlag === 4) desirialLandmark.visibility = (landmark[correctIndex + 3] - 1) / 10000;
+      deserialLandmarks.push(desirialLandmark);
     }
-    return filteredLandmarks;
+    return deserialLandmarks;
   };
 
-  private getLineWidth = (width: number, line = true) => {
-    return width * Math.pow(this.config.width / 640, line ? 1 : 2);
+  private deserializeResult = (result: SerializeLandmarks) => {
+    return {
+      face: this.deserializeLandmark(result.face, 478),
+      left_hand: this.deserializeLandmark(result.left_hand, 21),
+      right_hand: this.deserializeLandmark(result.right_hand, 21),
+      pose: this.deserializeLandmark(result.pose, 33),
+      pose_world: this.deserializeLandmark(result.pose_world, 33),
+    };
   };
 
   private setStreamConfiguration = (config: StreamConfigurations) => {

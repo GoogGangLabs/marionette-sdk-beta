@@ -1,4 +1,4 @@
-import { LandmarkConnectionArray, DrawingOptions, LandmarkResult } from "./types";
+import { LandmarkConnectionArray, DrawingOptions, DeserializeLandmark, LandmarkPoint } from "./types";
 
 const w = { color: "white", lineWidth: 4, radius: 6, visibilityMin: 0.5 };
 
@@ -13,7 +13,7 @@ const proceed = (value: Function | any, params?: any) => {
 
 export const drawConnectors = (
   context: CanvasRenderingContext2D,
-  landmarks: LandmarkResult[],
+  landmarks: DeserializeLandmark,
   connections?: LandmarkConnectionArray,
   style?: DrawingOptions
 ) => {
@@ -45,7 +45,7 @@ export const drawConnectors = (
 
 export const drawLandmarks = (
   context: CanvasRenderingContext2D,
-  landmarks?: LandmarkResult[],
+  landmarks?: DeserializeLandmark,
   style?: DrawingOptions
 ) => {
   if (landmarks) {
@@ -54,7 +54,7 @@ export const drawLandmarks = (
     const canvas = context.canvas;
     let sequence = 0;
     for (let idx = 0; idx < landmarks.length; idx++) {
-      const landmark: LandmarkResult = landmarks[idx];
+      const landmark: LandmarkPoint = landmarks[idx];
 
       if (void 0 !== landmark && (void 0 === landmark.visibility || landmark.visibility > style.visibilityMin)) {
         const path2D = new Path2D();
