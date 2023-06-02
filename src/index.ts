@@ -9,11 +9,18 @@ import {
   SerializeLandmarks,
   StreamResponse,
   DeserializeLandmarks,
-  SerializeLandmark,
   LandmarkPoint,
+  EuroFilterLandmarks,
+  EuroFilterLandmark,
+  EuroFilterPoint,
+  DeserializeLandmark,
+  SerializeLandmark,
 } from "./types";
 import { ErrorMessage, EventStatus, InferenceType, CandidateType, ProcessorType } from "./enum";
 import { drawConnectors, drawLandmarks, HAND_CONNECTIONS, POSE_CONNECTIONS, FACEMESH_TESSELATION } from "./draw";
+import { OneEuroFilter } from "./filter";
+
+const OPTIMIZE_OFFSET = 1000000;
 
 const protoSchema = `
 syntax = "proto3";
@@ -40,7 +47,7 @@ message StreamResponse {
 }
 `;
 
-const host = "https://api.goodganglabs.xyz";
+const host = "https://demo.goodganglabs.xyz";
 const protobufRoot = protobuf.parse(protoSchema, { keepCase: true }).root;
 const streamMessage = protobufRoot.lookupType("streampackage.StreamResponse");
 
@@ -52,8 +59,10 @@ class MarionetteClient {
   private signalSocket: Socket;
   private resultSocket: Socket;
   private publishFlag = false;
+  private filterFlag: boolean;
   private stream: MediaStream;
   private debugDataSet: DebugDataSet;
+  private euroFilterLandmarks: EuroFilterLandmarks;
 
   constructor() {
     this.signalSocket = io(host, { path: "/stream" });
@@ -80,7 +89,6 @@ class MarionetteClient {
       this.event.emit(EventStatus.ERROR, { message: ErrorMessage.UNAUTHORIZED });
     });
     this.peerConnection = await this.createPeerConnection();
-    this.resultSocket.emit("enterSession", { sessionId: this.signalSocket.id });
     this.signalSocket.emit("enterSession");
   };
 
@@ -98,7 +106,9 @@ class MarionetteClient {
         frameRate: { ideal: this.config.frameRate, min: 5 },
       },
     });
+    this.filterFlag = config.filterFlag || false;
     this.stream.getTracks().forEach((track) => this.peerConnection.addTrack(track, this.stream));
+    this.resultSocket.emit("enterSession", { sessionId: this.signalSocket.id, filterFlag: this.filterFlag });
     this.event.emit(EventStatus.LOAD_STREAM, this.stream);
   };
 
@@ -109,6 +119,8 @@ class MarionetteClient {
   public publish = async () => {
     if (this.publishFlag) return;
     this.publishFlag = true;
+    this.euroFilterLandmarks = this.initFilter();
+
     const offer = await this.peerConnection.createOffer();
     const setBitrate = async () => {
       const sender = this.peerConnection.getSenders()[0];
@@ -297,9 +309,57 @@ class MarionetteClient {
       enums: String,
       bytes: String,
     }) as StreamResponse;
-    const results: DeserializeLandmarks = this.deserializeResult(data.result);
+    const results: DeserializeLandmarks = this.filterFlag
+      ? this.deserializeResult(data.result)
+      : this.filterResult(data.result);
     this.event.emit(EventStatus.INFERENCE_RESULT, results);
     if (this.config.debug) this.setDebugData(data);
+  };
+
+  private initFilter = (): EuroFilterLandmarks => {
+    const initializeTarget = (size: number) =>
+      Array.from({ length: size }, (_, __) => ({
+        x: new OneEuroFilter(),
+        y: new OneEuroFilter(),
+        z: new OneEuroFilter(),
+      }));
+    return {
+      face: initializeTarget(478),
+      left_hand: initializeTarget(21),
+      right_hand: initializeTarget(21),
+      pose: initializeTarget(33),
+      pose_world: initializeTarget(33),
+    };
+  };
+
+  private filterResult = (result: SerializeLandmarks): DeserializeLandmarks => {
+    const filteredLandmarks: DeserializeLandmarks = {};
+
+    for (const key in this.euroFilterLandmarks) {
+      const filteredLandmark: DeserializeLandmark = [];
+      const euroFilterLandmark: EuroFilterLandmark = this.euroFilterLandmarks[key];
+      const limitFlag = key.indexOf("pose") === -1 ? 3 : 4;
+
+      euroFilterLandmark.forEach((point: EuroFilterPoint, idx: number) => {
+        const startIndex = idx * limitFlag;
+        const { x, y, z } = point;
+        const filteredPoint: LandmarkPoint = {};
+
+        if (result[key]) {
+          filteredPoint.x = x.filter((result[key][startIndex] - 1) / OPTIMIZE_OFFSET);
+          filteredPoint.y = y.filter((result[key][startIndex + 1] - 1) / OPTIMIZE_OFFSET);
+          filteredPoint.z = z.filter((result[key][startIndex + 2] - 1) / OPTIMIZE_OFFSET);
+          if (limitFlag === 4) filteredPoint.visibility = (result[key][startIndex + 3] - 1) / OPTIMIZE_OFFSET;
+          filteredLandmark.push(filteredPoint);
+        } else {
+          x.reset();
+          y.reset();
+          z.reset();
+        }
+      });
+      if (filteredLandmark.length > 0) filteredLandmarks[key] = filteredLandmark;
+    }
+    return filteredLandmarks;
   };
 
   private deserializeLandmark = (landmark: SerializeLandmark, length: number) => {
@@ -309,11 +369,11 @@ class MarionetteClient {
     for (let idx = 0; idx < length; idx++) {
       const correctIndex = idx * limitFlag;
       const desirialLandmark: LandmarkPoint = {
-        x: (landmark[correctIndex] - 1) / 10000,
-        y: (landmark[correctIndex + 1] - 1) / 10000,
-        z: (landmark[correctIndex + 2] - 1) / 10000,
+        x: (landmark[correctIndex] - 1) / OPTIMIZE_OFFSET,
+        y: (landmark[correctIndex + 1] - 1) / OPTIMIZE_OFFSET,
+        z: (landmark[correctIndex + 2] - 1) / OPTIMIZE_OFFSET,
       };
-      if (limitFlag === 4) desirialLandmark.visibility = (landmark[correctIndex + 3] - 1) / 10000;
+      if (limitFlag === 4) desirialLandmark.visibility = (landmark[correctIndex + 3] - 1) / OPTIMIZE_OFFSET;
       deserialLandmarks.push(desirialLandmark);
     }
     return deserialLandmarks;
