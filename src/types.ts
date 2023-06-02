@@ -1,3 +1,4 @@
+import { OneEuroFilter } from "./filter";
 import { CandidateType, InferenceType, ProcessorType } from "./enum";
 
 export interface DebugDataDetail {
@@ -28,6 +29,7 @@ export interface StreamConfigurations {
   candidateType?: CandidateType;
   model?: InferenceType[];
   processor?: ProcessorType;
+  filterFlag?: boolean;
   debug?: boolean;
 }
 
@@ -56,6 +58,22 @@ export interface SerializeLandmarks {
   right_hand?: SerializeLandmark;
   pose?: SerializeLandmark;
   pose_world?: SerializeLandmark;
+}
+
+export interface EuroFilterPoint {
+  x: OneEuroFilter;
+  y: OneEuroFilter;
+  z: OneEuroFilter;
+}
+
+export type EuroFilterLandmark = EuroFilterPoint[];
+
+export interface EuroFilterLandmarks {
+  face: EuroFilterLandmark;
+  left_hand: EuroFilterLandmark;
+  right_hand: EuroFilterLandmark;
+  pose: EuroFilterLandmark;
+  pose_world: EuroFilterLandmark;
 }
 
 export interface StreamResponse {

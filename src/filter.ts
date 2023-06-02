@@ -77,7 +77,7 @@ export class OneEuroFilter {
     this.dcutoff = dc;
   }
 
-  constructor(freq: number = 30, mincutoff: number = 1.0, beta: number = 0.0, dcutoff: number = 1.0) {
+  constructor(freq: number = 20, mincutoff: number = 1.0, beta: number = 0.0, dcutoff: number = 1.0) {
     this.setFrequency(freq);
     this.setMinCutoff(mincutoff);
     this.setBeta(beta);
