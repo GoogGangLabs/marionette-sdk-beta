@@ -85,11 +85,14 @@ class MarionetteClient {
       credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ code: password }),
-    }).catch(() => {
-      this.event.emit(EventStatus.ERROR, { message: ErrorMessage.UNAUTHORIZED });
-    });
-    this.peerConnection = await this.createPeerConnection();
-    this.signalSocket.emit("enterSession");
+    })
+      .then(async () => {
+        this.peerConnection = await this.createPeerConnection();
+        this.signalSocket.emit("enterSession");
+      })
+      .catch(() => {
+        this.event.emit(EventStatus.ERROR, { message: ErrorMessage.UNAUTHORIZED });
+      });
   };
 
   public getDevices = async () => {
