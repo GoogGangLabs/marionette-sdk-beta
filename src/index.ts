@@ -129,9 +129,11 @@ class MarionetteClient {
       const sender = this.peerConnection.getSenders()[0];
       const parameters = sender.getParameters();
 
-      if (!parameters.encodings) parameters.encodings = [{}];
-      parameters.encodings[0].maxBitrate = this.config.bitrate;
-      await sender.setParameters(parameters).catch(() => {});
+      try {
+        if (!parameters.encodings) parameters.encodings = [{}];
+        parameters.encodings[0].maxBitrate = this.config.bitrate;
+        await sender.setParameters(parameters);
+      } catch (_) {}
     };
     const waitIceCandidate = async () => {
       return await new Promise((resolve) => {
