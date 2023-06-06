@@ -1,6 +1,6 @@
 {
   "name": "marionette-sdk-beta",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "Marionette API to SDK",
   "main": "./lib/index.cjs",
   "module": "./lib/index.mjs",
