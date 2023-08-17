@@ -40,12 +40,12 @@
           videoElement.play();
         });
 
-        marionetteClient.on("INFERENCE_RESULT", (result) => {
+        marionetteClient.on("INFERENCE_RESULT", (results) => {
           /*
             When the deep learning results are received,
             you can visualize the results by passing them to the method below.
           */
-          marionetteClient.drawUtils(canvas, result);
+          marionetteClient.drawUtils(canvas, results);
         });
 
         marionetteClient.on("ICE_CANDIDATE", (state) => {
@@ -57,10 +57,10 @@
         });
 
         /* Input your access code */
-        await marionetteClient.createClient("ACCESS_CODE");
+        await marionetteClient.createClient("marionette123@");
         await marionetteClient.loadStream({
-          width: 160,
-          height: 120,
+          width: 320,
+          height: 240,
         });
         await marionetteClient.publish();
       };
