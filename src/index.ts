@@ -20,7 +20,7 @@ import { ErrorMessage, EventStatus, InferenceType, CandidateType, ProcessorType 
 import { drawConnectors, drawLandmarks, HAND_CONNECTIONS, POSE_CONNECTIONS, FACEMESH_TESSELATION } from "./draw";
 import { OneEuroFilter } from "./filter";
 
-const OPTIMIZE_OFFSET = 1000000;
+const OPTIMIZE_OFFSET = 10000;
 
 const protoSchema = `
 syntax = "proto3";
