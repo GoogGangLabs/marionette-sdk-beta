@@ -47,7 +47,7 @@ message StreamResponse {
 }
 `;
 
-const host = "https://demo.goodganglabs.xyz";
+const host = "https://phase2.goodganglabs.xyz";
 const protobufRoot = protobuf.parse(protoSchema, { keepCase: true }).root;
 const streamMessage = protobufRoot.lookupType("streampackage.StreamResponse");
 
