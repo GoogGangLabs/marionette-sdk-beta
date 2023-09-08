@@ -164,7 +164,7 @@ class MarionetteClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: this.signalSocket.id,
-          sdp: localOffer!.sdp,
+          sdp: btoa(localOffer!.sdp),
           type: localOffer!.type,
           processor: this.config.processor,
           model: this.config.model,
